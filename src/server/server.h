@@ -2,6 +2,7 @@
 #define server_h_
 
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 //Client structure
 typedef struct client {
@@ -11,6 +12,9 @@ typedef struct client {
   int sock;
   //Client length
   int len;
+  //Need client hello to connect
+  bool hello;
+  
 } Client;
 
 //Starts the server and returns a master sock
@@ -27,5 +31,5 @@ int setup_server(const char *ip, const int port, const int max_clients);
  * buffer is the message buffer from the client.
  * Will be null if a client connected or disconnected instead
  */
-void get_output(int sock, Client clients[], const int max_clients, int *index, char *buffer);
+void get_output(int sock, Client clients[], const int max_clients, int *index, char ** buffer, int *len);
 #endif

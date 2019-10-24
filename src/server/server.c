@@ -6,8 +6,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include "server.h"
+
+#define BUFFER_LEN 4096
 
 //Starts the server and returns a master sock
 int setup_server(const char *ip, const int port, const int max_clients) {
@@ -55,7 +58,7 @@ int setup_server(const char *ip, const int port, const int max_clients) {
  * buffer is the message buffer from the client.
  * Will be null if a client connected or disconnected instead
  */
-void get_output(int sock, Client clients[], const int max_clients, int *index, char *buffer) {
+void get_output(int sock, Client clients[], const int max_clients, int *index, char **buffer, int *len) {
   //File descriptor set
   fd_set rfds;
 
@@ -94,6 +97,10 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
     if ((c.sock = accept(sock, (struct sockaddr*)&c.sa, (socklen_t*)&c.len)) < 0) {
       perror("accept");
       *index = -2;
+      if (*buffer != NULL) {
+        free(*buffer);
+        *buffer = NULL;
+      }
     }
 
     //Inform user of socket number - used in send and receive commands
@@ -105,6 +112,10 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
       if (clients[i].sock == 0) {
         memcpy(&clients[i], &c, sizeof(c));
         *index = i;
+        if (*buffer != NULL) {
+          free(*buffer);
+          *buffer = NULL;
+        }
         break;
       }
     }
@@ -114,16 +125,20 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
   for (int i = 0; i < max_clients; ++i) {
     if (FD_ISSET(clients[i].sock, &rfds)) {
       //Check if it was for closing, and also read the incoming message
-      int valread;
       //If connection closed
-      if ((valread = read(clients[i].sock, buffer, 1024)) == 0) {
+      if ((*len = read(clients[i].sock, *buffer, BUFFER_LEN)) == 0) {
+        //Keep this in case needed
         //getpeername(clients[i].sock, (struct sockaddr*)&clients[i].sa, (socklen_t*)&clients[i].len);
         //printf("Host disconnected, ip %s, port %d\n", inet_ntoa(clients[i].sa.sin_addr), ntohs(clients[i].sa.sin_port));
 
         //Close the socket and mark as 0 in list for reuse
         close(clients[i].sock);
-        clients[i].sock = 0;
+        memset(clients + i, 0, sizeof(Client));
         *index = -1;
+        if (*buffer != NULL) {
+          free(*buffer);
+          *buffer = NULL;
+        }
       }
       else {
         //Someone sent a message and return the buffer

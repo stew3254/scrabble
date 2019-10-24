@@ -1,24 +1,31 @@
-#include <arpa/inet.h>
+#include <ctype.h>
+#include <string.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include "../scrabble.h"
+#include "../net.h"
 
-#define REMOTE_ADDR "127.0.0.1"
-#define REMOTE_PORT 1337
+#define ADDR "127.0.0.1"
+#define PORT 9000
+#define BUFFER_LEN 4096
 
-int main(int argc, char *argv[])
-{
-    struct sockaddr_in sa = {};
-    int s;
+int main(int argc, char *argv[]) {
+  char *ip = ADDR;
+  int port = PORT;
+  if (argc > 2) {
+    if (is_digit(argv[2]) && port > 0 && port < 65536) {
+      port = atoi(argv[2]);
+    }
+    else {
+      fprintf(stderr, "Must be a valid port");
+      return -1;
+    }
+  }
 
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(REMOTE_PORT);
-    sa.sin_addr.s_addr = inet_addr(REMOTE_ADDR);
+  int len = 0;
+  char *buffer = (char*) calloc(BUFFER_LEN, sizeof(char*));
+  Client c = scrabble_connect(ip, port);
 
-    s = socket(AF_INET, SOCK_STREAM, 0);
-    int c = connect(s, (struct sockaddr*) &sa, sizeof(sa));
-    close(s);
-    return 0;
+  return 0;
 }

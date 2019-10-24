@@ -1,34 +1,28 @@
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
-#include "server.h"
+#include "../scrabble.h"
+#include "../net.h"
 
 #define ADDR "0.0.0.0"
-#define PORT 1337
+#define PORT 9000
 #define MAX_CLIENTS 8
-#define BUFFER_SIZE 4096
-
 
 int main(int argc, char *argv[]) {
-  //Initialize client list
-  Client clients[MAX_CLIENTS] = {};
-
-  //Buffer
-  char buffer[BUFFER_SIZE+1] = {};
-
-  int sock, index;
-
-  //Start server
-  if ((sock = setup_server(ADDR, PORT, MAX_CLIENTS)) == -1)
-    return -1;
-
-  //Wait for people to connect
-  while(true) {
-    get_output(sock, clients, MAX_CLIENTS, &index, buffer);
-    if (buffer != NULL) {
-      printf("%s", buffer);
-      memset(buffer, 0, BUFFER_SIZE);
+  int port = PORT;
+  if (argc > 1) {
+    if (is_digit(argv[1]) && port > 0 && port < 65536) {
+      port = atoi(argv[1]);
+    }
+    else {
+      fprintf(stderr, "Must be a valid port");
+      return -1;
     }
   }
+
+  scrabble_server(ADDR, port, MAX_CLIENTS);
+
   return 0;
 }
