@@ -44,13 +44,26 @@ bool is_hello(const char *msg, int len) {
       }
     }
     ++pos;
+
+    //Find commas
     while (n < 2 && pos < len) {
       if (msg[pos] == ',')
         ++n;
       ++pos;
     }
+
+    //If less than 2 commas
     if (n < 2)
       return false;
+
+    //Find next \r\n
+    while (pos < len && msg[pos] != '\r' && msg[pos] != '\n')
+      ++pos;
+
+    //Close if not proper end of line
+    if (msg[pos] != '\r' && msg[pos] != '\n')
+      return false;
+
     return true;
   }
   else {
@@ -64,6 +77,7 @@ void goodbye(Client *c) {
   write(c->sock, msg, strlen(msg)); 
   close(c->sock);
   memset(c, 0, sizeof(Client));
+  printf("Host Disconnected\n");
 }
 
 
@@ -75,7 +89,7 @@ void quit(Client *c) {
   memset(c, 0, sizeof(Client));
 }
 
-//Checks to see if a message is a valid quit
+//Checks to see if a message is a valid quit (probably works)
 bool is_quit(const char *msg, const int len) {
   //5 bytes is the maximum needed for the base quit string
   char quit[7] = "QUIT\r\n";
@@ -83,14 +97,11 @@ bool is_quit(const char *msg, const int len) {
   if (len == strlen(quit) || len == strlen(quit)-1) {
     for (int i = 0; i < len; ++i) {
       //Check if thing after quit is not right after the word
-      if (msg[i] != quit[i] && i != 4)
+      if (i == 4 && (msg[i] == '\r' || msg[i] == '\n'))
+        return true;
+      else if (msg[i] != quit[i])
         return false;
-      else if (i == 4 && (msg[i] != '\r' || msg[i] != '\n'))
-        return false;
-      //This technically will let "QUIT\n\n" pass and I don't care
-      //TODO
     }
-    printf("TRUE\n");
     return true;
   }
   else {
@@ -146,15 +157,14 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
 
     //Allocate a new buffer when one doesn't exist
     if (buffer == NULL) {
-      buffer = (char*) malloc((BUFFER_LEN+1)*sizeof(char));
-      memset(buffer, 0, BUFFER_LEN+1);
+      buffer = (char*) calloc(BUFFER_LEN+1,sizeof(char));
     }
   }
   return 0;
 }
 
 //Connects to scrabble server
-Client scrabble_connect(const char *ip, const int port) {
+Client scrabble_connect(const char *ip, const int port, char **buffer, const int len) {
   Client *c = (Client*) calloc(1, sizeof(Client));
 
   //Create socket
@@ -177,7 +187,18 @@ Client scrabble_connect(const char *ip, const int port) {
     c->sock = -1;
     return *c;
   }
-  //Need to finish
-  hello(c);
+  int n = read(c->sock, *buffer, len);
+  if (is_hello(*buffer, len)) {
+    hello(c);
+    memset(*buffer, 0, len);
+  }
+  else {
+    quit(c);
+    close(c->sock);
+    memset(c, 0, sizeof(Client));
+    c->sock = -1;
+    free(*buffer);
+    buffer = NULL;
+  }
   return *c;
 }

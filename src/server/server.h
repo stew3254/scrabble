@@ -31,5 +31,5 @@ int setup_server(const char *ip, const int port, const int max_clients);
  * buffer is the message buffer from the client.
  * Will be null if a client connected or disconnected instead
  */
-void get_output(int sock, Client clients[], const int max_clients, int *index, char ** buffer, int *len);
+void get_output(int sock, Client clients[], const int max_clients, int *index, char **buffer, int *len);
 #endif

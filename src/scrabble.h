@@ -22,6 +22,6 @@ bool is_quit(const char *msg, const int len);
 int scrabble_server(const char *ip, const int port, const int max_clients);
 
 //Connects to scrabble server
-Client scrabble_connect(const char *ip, const int port);
+Client scrabble_connect(const char *ip, const int port, char **buffer, const int len);
 
 #endif
