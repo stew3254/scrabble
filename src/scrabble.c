@@ -9,6 +9,62 @@
 #define VERSION "1.0.1"
 #define AUTHOR "Ryan Stewart"
 
+//Does a quick check to see if the command might be valid
+bool check_command(const char* msg, const int len) {
+  if (len >= strlen(Command.hello) && strncmp(Command.hello, msg, strlen(Command.hello)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.quit) && strncmp(Command.quit, msg, strlen(Command.quit)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.ok) && strncmp(Command.ok, msg, strlen(Command.ok)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.nok) && strncmp(Command.nok, msg, strlen(Command.nok)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.userset) && strncmp(Command.userset, msg, strlen(Command.userset)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.userchange) && strncmp(Command.userchange, msg, strlen(Command.userchange)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.userjoin) && strncmp(Command.userjoin, msg, strlen(Command.userjoin)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.ready) && strncmp(Command.ready, msg, strlen(Command.ready)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.starting) && strncmp(Command.starting, msg, strlen(Command.starting)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.score) && strncmp(Command.score, msg, strlen(Command.score)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.boardpush) && strncmp(Command.boardpush, msg, strlen(Command.boardpush)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.tiles) && strncmp(Command.tiles, msg, strlen(Command.tiles)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.turn) && strncmp(Command.turn, msg, strlen(Command.turn)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.place) && strncmp(Command.place, msg, strlen(Command.place)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.pass) && strncmp(Command.pass, msg, strlen(Command.pass)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.exchange) && strncmp(Command.exchange, msg, strlen(Command.exchange)) == 0) {
+    return true;
+  }
+  else if (len >= strlen(Command.winner) && strncmp(Command.winner, msg, strlen(Command.winner)) == 0) {
+    return true;
+  }
+  return false;
+}
+
 //Given a client, constructs a proper hello and sends it to the client
 void hello(Client *c) {
   char msg[BUFFER_LEN+1] = "HELLO ";
@@ -70,6 +126,36 @@ bool is_hello(const char *msg, int len) {
     return false;
   }
 }
+
+//Sends an okay
+void ok(const Client *c, char *msg, const int len) {
+  int new_len = len+5;
+  char *okay = (char*) calloc(new_len, sizeof(char));
+  strcpy(okay,"OK ");
+  //Copy message over
+  memcpy(okay+3, msg, len);
+  memcpy(okay+new_len-2, "\r\n", sizeof(char)*2);
+  write(c->sock, okay, sizeof(char)*new_len); 
+  free(okay);
+}
+
+//Checks if a given message is a proper okay
+void is_ok(const char *msg, const int len);
+
+//Sends not okay
+void nok(const Client *c, char *msg, const int len) {
+  int new_len = len+6;
+  char *nokay = (char*) calloc(new_len, sizeof(char));
+  strcpy(nokay,"NOK ");
+  //Copy message over
+  memcpy(nokay+4, msg, len);
+  memcpy(nokay+new_len-2, "\r\n", 2);
+  write(c->sock, nokay, new_len); 
+  free(nokay);
+}
+
+//Checks if a given message is a proper not okay
+void is_nok(const char *msg, const int len);
 
 //Given a client, constructs a proper goodbye and closes connection to the client
 void goodbye(Client *c) {
@@ -151,6 +237,16 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
         goodbye(&clients[index]);
       else if (is_quit(buffer, len))
         goodbye(&clients[index]);
+      else {
+        if (check_command(buffer, len)) {
+          char msg[100] = "We are okay";
+          ok(&clients[index], msg, strlen(msg));
+        }
+        else {
+          char msg[100] = "Things are bad";
+          nok(&clients[index], msg, strlen(msg));
+        }
+      }
 
       memset(buffer, 0, BUFFER_LEN);
     }

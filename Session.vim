@@ -2,10 +2,10 @@ let SessionLoad = 1
 if &cp | set nocp | endif
 let s:cpo_save=&cpo
 set cpo&vim
-imap <Nul> <C-Space>
-inoremap <expr> <Up> pumvisible() ? "\" : "\<Up>"
-inoremap <expr> <S-Tab> pumvisible() ? "\" : "\<S-Tab>"
 inoremap <expr> <Down> pumvisible() ? "\" : "\<Down>"
+inoremap <expr> <S-Tab> pumvisible() ? "\" : "\<S-Tab>"
+inoremap <expr> <Up> pumvisible() ? "\" : "\<Up>"
+imap <Nul> <C-Space>
 inoremap <Plug>(emmet-anchorize-summary) =emmet#util#closePopup()=emmet#anchorizeURL(1)
 inoremap <Plug>(emmet-anchorize-url) =emmet#util#closePopup()=emmet#anchorizeURL(0)
 inoremap <Plug>(emmet-remove-tag) =emmet#util#closePopup()=emmet#removeTag()
@@ -115,7 +115,6 @@ set backupdir=~/.vim-tmp,~/.tmp,~/tmp,/var/tmp,/tmp
 set backupskip=/tmp/*,/private/tmp/*
 set completefunc=youcompleteme#CompleteFunc
 set completeopt=preview,menuone
-set cpoptions=aAceFsB
 set directory=~/.vim-tmp,~/.tmp,~/tmp,/var/tmp,/tmp
 set expandtab
 set fileencodings=ucs-bom,utf-8,default,latin1
@@ -129,7 +128,7 @@ set ruler
 set runtimepath=~/.vim,~/.vim/bundle/Vundle.vim,~/.vim/bundle/YouCompleteMe,~/.vim/bundle/emmet-vim,~/.vim/bundle/vim-gitgutter,/var/lib/vim/addons,/usr/share/vim/vimfiles,/usr/share/vim/vim81,/usr/share/vim/vimfiles/after,/var/lib/vim/addons/after,~/.vim/after,~/.vim/bundle/Vundle.vim,~/.vim/bundle/Vundle.vim/after,~/.vim/bundle/YouCompleteMe/after,~/.vim/bundle/emmet-vim/after,~/.vim/bundle/vim-gitgutter/after
 set scrolloff=2
 set shiftwidth=2
-set shortmess=filnxtToOIc
+set shortmess=filnxtToOI
 set showcmd
 set showmatch
 set smartcase
@@ -148,9 +147,10 @@ set shortmess=aoO
 badd +4 makefile
 badd +21 src/server/server.c
 badd +3 src/server/server.h
-badd +0 src/server/main.c
-badd +0 src/scrabble.c
-badd +0 src/scrabble.h
+badd +1 src/server/main.c
+badd +1 src/scrabble.c
+badd +1 src/scrabble.h
+badd +0 src/client/client.c
 argglobal
 silent! argdel *
 $argadd makefile
@@ -159,7 +159,8 @@ tabnew
 tabnew
 tabnew
 tabnew
-tabnext -4
+tabnew
+tabnext -5
 edit src/server/main.c
 set splitbelow splitright
 set nosplitbelow
@@ -303,32 +304,188 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-13
+14
 normal! zo
-15
+16
 normal! zo
-15
-normal! zo
-17
-normal! zo
-20
-normal! zo
-20
-normal! zo
-22
-normal! zo
-23
-normal! zo
-28
-normal! zo
-30
-normal! zo
-let s:l = 11 - ((10 * winheight(0) + 29) / 58)
+let s:l = 2 - ((1 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-11
+2
 normal! 0
+tabnext
+edit src/client/client.c
+set splitbelow splitright
+set nosplitbelow
+set nosplitright
+wincmd t
+set winminheight=0
+set winheight=1
+set winminwidth=0
+set winwidth=1
+argglobal
+let s:cpo_save=&cpo
+set cpo&vim
+nmap <buffer> ,hp <Plug>GitGutterPreviewHunk
+nmap <buffer> ,hu <Plug>GitGutterUndoHunk
+nmap <buffer> ,hs <Plug>GitGutterStageHunk
+nmap <buffer> [c <Plug>GitGutterPrevHunk
+nmap <buffer> ]c <Plug>GitGutterNextHunk
+xmap <buffer> ac <Plug>GitGutterTextObjectOuterVisual
+omap <buffer> ac <Plug>GitGutterTextObjectOuterPending
+xmap <buffer> ic <Plug>GitGutterTextObjectInnerVisual
+omap <buffer> ic <Plug>GitGutterTextObjectInnerPending
+let &cpo=s:cpo_save
+unlet s:cpo_save
+setlocal keymap=
+setlocal noarabic
+setlocal noautoindent
+setlocal backupcopy=
+setlocal balloonexpr=
+setlocal nobinary
+setlocal nobreakindent
+setlocal breakindentopt=
+setlocal bufhidden=
+setlocal buflisted
+setlocal buftype=
+setlocal cindent
+setlocal cinkeys=0{,0},0),:,0#,!^F,o,O,e
+setlocal cinoptions=
+setlocal cinwords=if,else,while,do,for,switch
+set colorcolumn=80
+setlocal colorcolumn=80
+setlocal comments=sO:*\ -,mO:*\ \ ,exO:*/,s1:/*,mb:*,ex:*/,://
+setlocal commentstring=/*%s*/
+setlocal complete=.,w,b,u,t,i
+setlocal concealcursor=
+setlocal conceallevel=0
+setlocal completefunc=youcompleteme#CompleteFunc
+setlocal nocopyindent
+setlocal cryptmethod=
+setlocal nocursorbind
+setlocal nocursorcolumn
+setlocal nocursorline
+setlocal define=
+setlocal dictionary=
+setlocal nodiff
+setlocal equalprg=
+setlocal errorformat=
+setlocal expandtab
+if &filetype != 'c'
+setlocal filetype=c
+endif
+setlocal fixendofline
+setlocal foldcolumn=0
+setlocal foldenable
+setlocal foldexpr=0
+setlocal foldignore=#
+setlocal foldlevel=10
+setlocal foldmarker={{{,}}}
+set foldmethod=indent
+setlocal foldmethod=indent
+setlocal foldminlines=1
+set foldnestmax=10
+setlocal foldnestmax=10
+setlocal foldtext=foldtext()
+setlocal formatexpr=
+setlocal formatoptions=tcq
+setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
+setlocal formatprg=
+setlocal grepprg=
+setlocal iminsert=0
+setlocal imsearch=-1
+setlocal include=
+setlocal includeexpr=
+setlocal indentexpr=
+setlocal indentkeys=0{,0},:,0#,!^F,o,O,e
+setlocal noinfercase
+setlocal iskeyword=@,48-57,_,192-255
+setlocal keywordprg=
+setlocal nolinebreak
+setlocal nolisp
+setlocal lispwords=
+setlocal nolist
+setlocal makeencoding=
+setlocal makeprg=
+setlocal matchpairs=(:),{:},[:]
+setlocal modeline
+setlocal modifiable
+setlocal nrformats=bin,octal,hex
+set number
+setlocal number
+setlocal numberwidth=4
+setlocal omnifunc=ccomplete#Complete
+setlocal path=
+setlocal nopreserveindent
+setlocal nopreviewwindow
+setlocal quoteescape=\\
+setlocal noreadonly
+set relativenumber
+setlocal relativenumber
+setlocal norightleft
+setlocal rightleftcmd=search
+setlocal noscrollbind
+setlocal shiftwidth=2
+setlocal noshortname
+setlocal signcolumn=auto
+setlocal smartindent
+setlocal softtabstop=0
+setlocal nospell
+setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
+setlocal spellfile=
+setlocal spelllang=en
+setlocal statusline=
+setlocal suffixesadd=
+setlocal swapfile
+setlocal synmaxcol=3000
+if &syntax != 'c'
+setlocal syntax=c
+endif
+setlocal tabstop=2
+setlocal tagcase=
+setlocal tags=
+setlocal termwinkey=
+setlocal termwinscroll=10000
+setlocal termwinsize=
+setlocal textwidth=0
+setlocal thesaurus=
+setlocal noundofile
+setlocal undolevels=-123456
+setlocal varsofttabstop=
+setlocal vartabstop=
+setlocal nowinfixheight
+setlocal nowinfixwidth
+setlocal wrap
+setlocal wrapmargin=0
+18
+normal! zo
+28
+normal! zo
+47
+normal! zo
+48
+normal! zo
+49
+normal! zo
+51
+normal! zo
+70
+normal! zo
+73
+normal! zo
+96
+normal! zo
+98
+normal! zo
+108
+normal! zo
+let s:l = 99 - ((37 * winheight(0) + 29) / 58)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+99
+normal! 014|
 tabnext
 edit src/scrabble.h
 set splitbelow splitright
@@ -427,8 +584,7 @@ setlocal matchpairs=(:),{:},[:]
 setlocal modeline
 setlocal modifiable
 setlocal nrformats=bin,octal,hex
-set number
-setlocal number
+setlocal nonumber
 setlocal numberwidth=4
 setlocal omnifunc=ccomplete#Complete
 setlocal path=
@@ -436,8 +592,7 @@ setlocal nopreserveindent
 setlocal nopreviewwindow
 setlocal quoteescape=\\
 setlocal noreadonly
-set relativenumber
-setlocal relativenumber
+setlocal norelativenumber
 setlocal norightleft
 setlocal rightleftcmd=search
 setlocal noscrollbind
@@ -473,12 +628,12 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 7 - ((6 * winheight(0) + 29) / 58)
+let s:l = 23 - ((22 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-7
-normal! 028|
+23
+normal! 04|
 tabnext
 edit src/scrabble.c
 set splitbelow splitright
@@ -623,16 +778,32 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-29
+31
 normal! zo
-44
+38
 normal! zo
-let s:l = 17 - ((16 * winheight(0) + 29) / 58)
+42
+normal! zo
+124
+normal! zo
+128
+normal! zo
+129
+normal! zo
+144
+normal! zo
+159
+normal! zo
+176
+normal! zo
+202
+normal! zo
+let s:l = 12 - ((11 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-17
-normal! 016|
+12
+normal! 0
 tabnext
 edit src/server/server.c
 set splitbelow splitright
@@ -777,30 +948,24 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-15
-normal! zo
-60
-normal! zo
-94
+62
 normal! zo
 96
 normal! zo
-109
-normal! zo
 111
 normal! zo
-124
+126
 normal! zo
-125
+127
 normal! zo
-129
+130
 normal! zo
-let s:l = 81 - ((2 * winheight(0) + 29) / 58)
+let s:l = 1 - ((0 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-81
-normal! 011|
+1
+normal! 0
 tabnext
 edit src/server/server.h
 set splitbelow splitright
@@ -957,7 +1122,7 @@ if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0
   silent exe 'bwipe ' . s:wipebuf
 endif
 unlet! s:wipebuf
-set winheight=1 winwidth=20 shortmess=filnxtToOIc
+set winheight=1 winwidth=20 shortmess=filnxtToOI
 set winminheight=1 winminwidth=1
 let s:sx = expand("<sfile>:p:r")."x.vim"
 if file_readable(s:sx)
