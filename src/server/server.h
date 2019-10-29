@@ -8,10 +8,14 @@
 typedef struct client {
   //Sock address
   struct sockaddr_in sa;
+  //Tiles in their hand
+  char hand[8];
   //Client sock
   int sock;
   //Client length
   int len;
+  //Score
+  int score;
   //Need client hello to connect
   bool hello;
   

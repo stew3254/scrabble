@@ -41,6 +41,11 @@ static struct command {
   .winner = "WINNER",
 };
 
+typedef struct tile {
+  int modifier;
+  char letter;
+} Tile;
+
 //Does a quick check to see if the command might be valid
 bool check_command(const char* msg, const int len);
 
@@ -70,6 +75,15 @@ void quit(Client *c);
 
 //Checks if something is quit
 bool is_quit(const char *msg, const int len);
+
+//Makes a tile into a string
+void tile_to_str(const Tile *t, char *s);
+
+//Makes a tile into a string
+void str_to_tile(Tile *t, const char *s);
+
+//Sends the board to everyone
+void board_push(const Client *clients, const int max_clients, Tile **board);
 
 //Starts the scrabble server
 int scrabble_server(const char *ip, const int port, const int max_clients);

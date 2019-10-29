@@ -8,6 +8,8 @@
 #define BUFFER_LEN 4096
 #define VERSION "1.0.1"
 #define AUTHOR "Ryan Stewart"
+#define BOARD_HEIGHT 15
+#define BOARD_WIDTH 15
 
 //Does a quick check to see if the command might be valid
 bool check_command(const char* msg, const int len) {
@@ -195,14 +197,76 @@ bool is_quit(const char *msg, const int len) {
   }
 }
 
+//Makes a tile into a string
+void tile_to_str(const Tile *t, char *s) {
+  memcpy(s, "(", 1);
+  strcat(s,&t->letter);
+  strcat(s, ",");
+  char n = t->modifier + '0';
+  strcat(s, &n);
+  strcat(s, ")");
+}
+
+bool is_tile(const char *s) {
+  char tile[6] = "(A,0)";
+  for (int i = 0; i < 6; ++i) {
+    if (i == 1 && (s[i] != '0' || s[i] - tile[i] < 0 || s[i] - tile[i] > 25))
+      return false;
+    else if (i == 3 && (s[i] < 0 || s[i] > 4))
+      return false;
+    else if (s[i] != tile[i])
+      return false;
+  }
+  return true;
+}
+
+//Makes a tile into a string
+void str_to_tile(Tile *t, const char *s) {
+  t->letter = s[1];
+  t->modifier = (int) s[3];
+}
+
+//Sends the board to everyone
+void board_push(const Client *clients, const int max_clients, Tile **board) {
+  char *str_board = (char*) calloc(BUFFER_LEN+1, sizeof(char));
+  char *tile = (char*) calloc(6, sizeof(char));
+  memcpy(str_board, "BOARDPUSH\r\n", 11);
+  for (int i = 0; i < BOARD_HEIGHT; ++i) {
+    for (int j = 0; j < BOARD_HEIGHT; ++j) {
+      tile_to_str(&board[i][j], tile);
+      strcat(str_board, tile);
+      memset(tile, 0, 6);
+    }
+    strcat(str_board, "\r\n");
+  }
+  for (int i = 0; i < max_clients; ++i) {
+    write(clients[i].sock, str_board, BUFFER_LEN);
+  }
+  free(str_board);
+  free(tile);
+}
+
+void read_board();
+
 //Starts the scrabble server
 int scrabble_server(const char *ip, const int port, const int max_clients) {
   //Initialize client list
-  Client *clients = (Client*) malloc((max_clients)*sizeof(Client));
+  Client *clients = (Client*) calloc(max_clients, sizeof(Client));
+
+  //Initialize Board
+  Tile **board = (Tile**) calloc(BOARD_HEIGHT, sizeof(Tile*));
+  for (int i = 0; i < BOARD_HEIGHT; ++i)
+    board[i] = (Tile*) calloc(BOARD_WIDTH, sizeof(Tile));
+
+  //Initialize tiles on board
+  for (int i = 0; i < BOARD_HEIGHT; ++i) {
+    for (int j = 0; j < BOARD_WIDTH; ++j) {
+      board[i][j].letter = '0';
+    }
+  }
 
   //Buffer
-  char *buffer = (char*) malloc((BUFFER_LEN+1)*sizeof(char));
-  memset(buffer, 0, BUFFER_LEN+1);
+  char *buffer = (char*) calloc(BUFFER_LEN+1, sizeof(char));
 
   int sock, index, len;
 
@@ -237,6 +301,10 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
         goodbye(&clients[index]);
       else if (is_quit(buffer, len))
         goodbye(&clients[index]);
+      //TODO testing
+      else if (strncmp(buffer, "push", 4) == 0) {
+        board_push(clients, max_clients, board);
+      }
       else {
         if (check_command(buffer, len)) {
           char msg[100] = "We are okay";
