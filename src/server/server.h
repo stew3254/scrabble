@@ -4,8 +4,12 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 
+#define NAME_LEN 32
+
 //Client structure
 typedef struct client {
+  //Username
+  char name[NAME_LEN+1];
   //Sock address
   struct sockaddr_in sa;
   //Tiles in their hand
@@ -35,5 +39,5 @@ int setup_server(const char *ip, const int port, const int max_clients);
  * buffer is the message buffer from the client.
  * Will be null if a client connected or disconnected instead
  */
-void get_output(int sock, Client clients[], const int max_clients, int *index, char **buffer, int *len);
+int get_output(int sock, Client clients[], const int max_clients, int *index, char **buffer, int *len);
 #endif

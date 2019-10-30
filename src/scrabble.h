@@ -85,6 +85,12 @@ void str_to_tile(Tile *t, const char *s);
 //Sends the board to everyone
 void board_push(const Client *clients, const int max_clients, Tile **board);
 
+//TODO fix this
+int get_winner(const Client *clients, const int max_socks);
+
+//Pass userlist and the index of the winner
+void winner(const Client *clients, const int max_socks, const int index);
+
 //Starts the scrabble server
 int scrabble_server(const char *ip, const int port, const int max_clients);
 

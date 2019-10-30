@@ -84,6 +84,7 @@ void hello(Client *c) {
   c->hello = true;
 }
 
+//TODO could redo this
 //Checks to see if a message is a valid hello
 bool is_hello(const char *msg, int len) {
   //21 bytes is the maximum needed for the base hello string
@@ -115,13 +116,11 @@ bool is_hello(const char *msg, int len) {
       return false;
 
     //Find next \r\n
-    while (pos < len && msg[pos] != '\r' && msg[pos] != '\n')
-      ++pos;
+    for (; pos < len && msg[pos] != '\r'; ++pos);
 
     //Close if not proper end of line
-    if (msg[pos] != '\r' && msg[pos] != '\n')
+    if (pos >= len && msg[pos] != '\n')
       return false;
-
     return true;
   }
   else {
@@ -240,13 +239,74 @@ void board_push(const Client *clients, const int max_clients, Tile **board) {
     strcat(str_board, "\r\n");
   }
   for (int i = 0; i < max_clients; ++i) {
-    write(clients[i].sock, str_board, BUFFER_LEN);
+    if (clients[i].sock != 0) {
+      write(clients[i].sock, str_board, BUFFER_LEN);
+    }
   }
   free(str_board);
   free(tile);
 }
 
-void read_board();
+//Read in the board
+void read_board(const char *msg, const int len) {
+
+}
+
+//Checks if someone is a winner
+bool is_winner(const char *msg, const int len) {
+  int n = strlen(Command.winner);
+  //Make sure message starts with "WINNER "
+  if (len > n && strncmp(msg, Command.winner, n) == 0 && msg[n] == ' ') {
+    ++n;
+    //Look through string until it ends or hits a space
+    for (; n <= len && msg[n] >= '0' && msg[n] <= '9'; ++n);
+
+    //Check if it's too long or not a space
+    if (n > len)
+      return false;
+    else if (msg[n] != ' ')
+      return false;
+    ++n;
+
+    //Look for the '\r'
+    int name_len = 0;
+    for (; n < len && name_len <= NAME_LEN && msg[n] != '\r'; ++n,++name_len);
+    if (name_len > NAME_LEN && n != len && msg[n] != '\n')
+      return false;
+    return true;
+  }
+  return false;
+}
+
+//TODO fix this
+int get_winner(const Client *clients, const int max_clients) {
+  int max_score = 0;
+  int max = 0;
+  for (int i = 0; i < max_clients; ++i) {
+    if (clients[i].score > max_score) {
+      max_score = clients[i].score;
+      max = i;
+    }
+  }
+  return max;
+}
+
+//Pass userlist and the index of the winner
+void winner(const Client *clients, const int max_clients, const int index) {
+  char msg[100] = "WINNER ";
+  char num[20] = "";
+  sprintf(num, "%d", clients[index].score);
+  strcat(msg, num);
+  strcat(msg, " ");
+  strcat(msg, clients[index].name);
+  strcat(msg, "\r\n");
+  //TODO fix this
+  for (int i = 0; i < max_clients; ++i) {
+    if (clients[i].sock != 0) {
+      write(clients[i].sock, msg, BUFFER_LEN);
+    }
+  }
+}
 
 //Starts the scrabble server
 int scrabble_server(const char *ip, const int port, const int max_clients) {
@@ -268,7 +328,7 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
   //Buffer
   char *buffer = (char*) calloc(BUFFER_LEN+1, sizeof(char));
 
-  int sock, index, len;
+  int sock, index, len, connected_clients;
 
   //Start server
   if ((sock = setup_server(ip, port, max_clients)) == -1)
@@ -277,7 +337,7 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
   //Wait for people to connect
   while(true) {
     //Wait for output
-    get_output(sock, clients, max_clients, &index, &buffer, &len);
+    connected_clients = get_output(sock, clients, max_clients, &index, &buffer, &len);
 
     //Problem accepting connection
     if (index == -2) {
@@ -301,9 +361,13 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
         goodbye(&clients[index]);
       else if (is_quit(buffer, len))
         goodbye(&clients[index]);
+      else if (strncmp(buffer, "winner", 6) == 0) {
+        index = get_winner(clients, max_clients);
+        winner(clients, connected_clients, index);
+      }
       //TODO testing
       else if (strncmp(buffer, "push", 4) == 0) {
-        board_push(clients, max_clients, board);
+        board_push(clients, connected_clients, board);
       }
       else {
         if (check_command(buffer, len)) {

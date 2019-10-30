@@ -57,8 +57,9 @@ int setup_server(const char *ip, const int port, const int max_clients) {
  * If the value of clients[i].sock == 0 then the host disconnected, Otherwise something happened
  * buffer is the message buffer from the client.
  * Will be null if a client connected or disconnected instead
+ * Returns the number of clients currently connected
  */
-void get_output(int sock, Client clients[], const int max_clients, int *index, char **buffer, int *len) {
+int get_output(int sock, Client clients[], const int max_clients, int *index, char **buffer, int *len) {
   //File descriptor set
   fd_set rfds;
 
@@ -72,11 +73,14 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
   FD_SET(sock, &rfds);
   max_sd = sock;
 
+  int connected_clients = 0;
   //Add child sockets to set
   for (int i = 0 ; i < max_clients; ++i) {
     //If valid socket descriptor then add to read list
-    if (clients[i].sock > 0)
+    if (clients[i].sock > 0) {
       FD_SET(clients[i].sock, &rfds);
+      ++connected_clients;
+    }
 
     //Highest file descriptor number, need it for the select function
     if (clients[i].sock > max_sd)
@@ -102,6 +106,7 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
         *buffer = NULL;
       }
     }
+    ++connected_clients;
 
     //Inform user of socket number - used in send and receive commands
     //printf("New connection, socket fd is %d, ip is : %s, port : %d\n", c.sock, inet_ntoa(c.sa.sin_addr), ntohs(c.sa.sin_port));
@@ -135,6 +140,7 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
         close(clients[i].sock);
         memset(clients + i, 0, sizeof(Client));
         *index = -1;
+        --connected_clients;
         if (*buffer != NULL) {
           free(*buffer);
           *buffer = NULL;
@@ -146,4 +152,5 @@ void get_output(int sock, Client clients[], const int max_clients, int *index, c
       }
     }
   }
+  return connected_clients;
 }
