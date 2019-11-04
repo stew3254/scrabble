@@ -5,13 +5,11 @@
 #include <unistd.h>
 #include "scrabble.h"
 
-#define BUFFER_LEN 4096
-#define VERSION "1.0.1"
 #define AUTHOR "Ryan Stewart"
-#define BOARD_HEIGHT 15
-#define BOARD_WIDTH 15
+#define VERSION "1.0.1"
 
 //Does a quick check to see if the command might be valid
+//Yes I know this is a horrible looking function. This might get fixed in the future
 bool check_command(const char* msg, const int len) {
   if (len >= strlen(Command.hello) && strncmp(Command.hello, msg, strlen(Command.hello)) == 0) {
     return true;
@@ -140,6 +138,7 @@ void ok(const Client *c, char *msg, const int len) {
   free(okay);
 }
 
+//TODO fix this
 //Checks if a given message is a proper okay
 void is_ok(const char *msg, const int len);
 
@@ -155,6 +154,7 @@ void nok(const Client *c, char *msg, const int len) {
   free(nokay);
 }
 
+//TODO fix this
 //Checks if a given message is a proper not okay
 void is_nok(const char *msg, const int len);
 
@@ -166,7 +166,6 @@ void goodbye(Client *c) {
   memset(c, 0, sizeof(Client));
   printf("Host Disconnected\n");
 }
-
 
 //Quits and closes the connection
 void quit(Client *c) {
@@ -196,6 +195,37 @@ bool is_quit(const char *msg, const int len) {
   }
 }
 
+//Checks if a user sets their name
+bool is_userset(const char* msg, const int len) {
+  if (strncmp(Command.userset, msg, strlen(Command.userset)) == 0) {
+    for (int i = strlen(Command.userset); msg[i] != '\r' && msg[i+1] != '\n'; ++i) {
+      if (i > len || i - strlen(Command.userset) > 32)
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+//Sets the username
+bool userset_server(Client *clients, const int connected_clients, const int index,
+                    const char *name, const int len) {
+  for (int i = 0; i < connected_clients; ++i) {
+    if (strcmp(clients[i].name, name) == 0 && i != index)
+      return false;
+  }
+  memcpy(clients[index].name, name, len);
+  return true;
+}
+
+//Sets the username
+void userset_client(Client *c, const char *name, const int len) {
+  char msg[60] = "USERSET ";
+  int msg_len = strlen(msg);
+  memcpy(msg + msg_len, name, len);
+  write(c->sock, msg, msg_len + len);
+}
+
 //Makes a tile into a string
 void tile_to_str(const Tile *t, char *s) {
   memcpy(s, "(", 1);
@@ -206,15 +236,21 @@ void tile_to_str(const Tile *t, char *s) {
   strcat(s, ")");
 }
 
+//Checks if the given string is a tile
 bool is_tile(const char *s) {
-  char tile[6] = "(A,0)";
-  for (int i = 0; i < 6; ++i) {
-    if (i == 1 && (s[i] != '0' || s[i] - tile[i] < 0 || s[i] - tile[i] > 25))
+  const char tile[6] = "(A,0)";
+  for (int i = 0; i < 5; ++i) {
+    if (i == 1) {
+      if(s[i] != '0' && (s[i] - tile[i] < 0 || s[i] - tile[i] > 25))
+        return false;
+    }
+    else if (i == 3) {
+      if (s[i] < '0' || s[i] > '4')
+        return false;
+    }
+    else if (s[i] != tile[i]) {
       return false;
-    else if (i == 3 && (s[i] < 0 || s[i] > 4))
-      return false;
-    else if (s[i] != tile[i])
-      return false;
+    }
   }
   return true;
 }
@@ -247,9 +283,110 @@ void board_push(const Client *clients, const int max_clients, Tile **board) {
   free(tile);
 }
 
-//Read in the board
-void read_board(const char *msg, const int len) {
+//Check if something is a board
+bool is_board(const char *msg, const int len) {
+  char* push = (char*) calloc(20, sizeof(char));
+  char* tile = (char*) calloc(6, sizeof(char));
+  strcpy(push, Command.boardpush);
+  strcat(push, "\r\n");
+  int n = strlen(push);
+  //Make sure message starts with "BOARDPUSH "
+  if (n < len && strncmp(push, msg, n) == 0) {
+    for (int i = 0; i < BOARD_HEIGHT; ++i) {
+      for (int j = 0; j < BOARD_WIDTH; ++j) {
+        //Copy in tile
+        strncpy(tile, msg+n, 5);
+        //Check if the tile is valid and free memory if not
+        if(n+5 < len && !is_tile(tile)) {
+          free(push);
+          free(tile);
+          return false;
+        }
+        //Advance 5
+        n += 5;
+      }
+      //Check if the format still fits, free otherwise
+      if (n+2 < len && strncmp(msg+n, "\r\n", 2) != 0) {
+        free(push);
+        free(tile);
+        return false;
+      }
+      n += 2;
+    }
+  }
+  free(push);
+  free(tile);
+  return true;
+}
 
+//Read in the board
+//Uses memory efficiency over time efficiency
+void read_board(Tile **board, const char *msg) {
+  char* tile = (char*) calloc(6, sizeof(char));
+  int n = strlen(Command.boardpush)+2;
+  for (int i = 0; i < BOARD_HEIGHT; ++i) {
+    for (int j = 0; j < BOARD_WIDTH; ++j) {
+      //Copy tile in and copy it into the board
+      strncpy(tile, msg+n, 5);
+      str_to_tile(&board[i][j], tile);
+      n += 5;
+    }
+    n += 2;
+  }
+  free(tile);
+}
+
+//TODO fix this
+//Checks if is place
+bool is_place(const char *msg, const int len) {
+  const char place[10] = "(A,0,0)";
+  char num[20] = "";
+  int n = 0;
+  int place_len = strlen(place), i;
+  if (len > place_len && msg[0] == '(') {
+    for (i = 0; i + 1 < len && msg[i+1] != '\r' && msg[i+2] != '\n'; ++i) {
+      if (i%place_len == 1) {
+        if(msg[i+1] != '0' && (msg[i+1] - place[i] < 0 || msg[i+1] - place[i] > 25))
+          return false;
+      }
+      //TODO fix this
+      else if (i%place_len == 3 || i%place_len == 5) {
+        if (msg[i+1] < '0' || msg[i+1] > '4')
+          return false;
+      }
+      else if (msg[i+1] != place[i]) {
+        return false;
+      }
+    }
+    if (i < len && strncmp(msg+i, ")\r\n", 3) == 0)
+      return true;
+    return false;
+  }
+  return false;
+}
+
+//TODO fix this
+//Places a tile
+void place(Client *c, const Tile *tiles, const int len) {
+  char *msg = (char*) calloc(BUFFER_LEN+1, sizeof(char));
+  char n[3] = "";
+  strcat(msg, "(");
+  for (int i = 0; i < len; ++i) {
+    strcat(msg, "(");
+    strcat(msg, &tiles[i].letter);
+    strcat(msg, ",");
+    sprintf(n, "%d", tiles[i].x);
+    strcat(msg, n);
+    memset(n,0,3);
+    strcat(msg, ",");
+    sprintf(n, "%d", tiles[i].y);
+    strcat(msg, n);
+    memset(n,0,3);
+    strcat(msg, ")");
+  }
+  strcat(msg, ")\r\n");
+  write(c->sock, msg, BUFFER_LEN);
+  free(msg);
 }
 
 //Checks if someone is a winner
@@ -291,6 +428,7 @@ int get_winner(const Client *clients, const int max_clients) {
   return max;
 }
 
+//TODO fix this
 //Pass userlist and the index of the winner
 void winner(const Client *clients, const int max_clients, const int index) {
   char msg[100] = "WINNER ";
@@ -354,13 +492,56 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
     //Client sent message
     else if (buffer != NULL) {
       printf("%d %s", len, buffer);
+
+      //Check to see if a command might be valid
+      if (!check_command(buffer, len)) {
+        char msg[100] = "Command does not exist!";
+        nok((clients+index), msg, strlen(msg));
+      }
+
       //Check the if hello is correct
-      if (clients[index].hello && is_hello(buffer, len))
+      if (clients[index].hello && is_hello(buffer, len)) {
         clients[index].hello = false;
-      else if (clients[index].hello && !is_hello(buffer, len))
-        goodbye(&clients[index]);
-      else if (is_quit(buffer, len))
-        goodbye(&clients[index]);
+      }
+      else if (clients[index].hello && !is_hello(buffer, len)) {
+        goodbye(clients+index);
+      }
+      else if (is_quit(buffer, len)) {
+        goodbye(clients+index);
+      }
+      else if (strncmp(Command.place, buffer, strlen(Command.place)) == 0) {
+          if (is_place(buffer, len)) {
+            printf("Here\n");
+          }
+          else  {
+            char msg[100] = "Incorrect format";
+            nok((clients+index), msg, strlen(msg));
+          }
+      }
+      else if (strncmp(Command.userset, buffer, strlen(Command.userset)) == 0) {
+        //See if the username is set
+        if (is_userset(buffer, len)) {
+          char name[40] = "";
+          int n = 0;
+          //Find length of string
+          for (int i = strlen(Command.userset)+1; buffer[i] != '\r' && buffer[i] != '\n'; ++i,++n);
+          memcpy(name, buffer+strlen(Command.userset)+1, n);
+          //Try to successfully set username
+          if (userset_server(clients, connected_clients, index, name, n)) {
+            char msg[100] = "Name changed successfully";
+            ok((clients+index), msg, strlen(msg));
+            userchange(clients, connected_clients, name, n);
+          }
+          else  {
+            char msg[100] = "The given name is already taken";
+            nok((clients+index), msg, strlen(msg));
+          }
+        }
+        else  {
+          char msg[100] = "Incorrect format";
+          nok((clients+index), msg, strlen(msg));
+        }
+      }
       else if (strncmp(buffer, "winner", 6) == 0) {
         index = get_winner(clients, max_clients);
         winner(clients, connected_clients, index);
@@ -369,24 +550,12 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
       else if (strncmp(buffer, "push", 4) == 0) {
         board_push(clients, connected_clients, board);
       }
-      else {
-        if (check_command(buffer, len)) {
-          char msg[100] = "We are okay";
-          ok(&clients[index], msg, strlen(msg));
-        }
-        else {
-          char msg[100] = "Things are bad";
-          nok(&clients[index], msg, strlen(msg));
-        }
-      }
-
+    }
+    if (buffer == NULL)
+      buffer = calloc(BUFFER_LEN+1, sizeof(char));
+    else
       memset(buffer, 0, BUFFER_LEN);
-    }
 
-    //Allocate a new buffer when one doesn't exist
-    if (buffer == NULL) {
-      buffer = (char*) calloc(BUFFER_LEN+1,sizeof(char));
-    }
   }
   return 0;
 }

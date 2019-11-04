@@ -3,6 +3,10 @@
 
 #include "server/server.h"
 
+#define BUFFER_LEN 4096
+#define BOARD_HEIGHT 15
+#define BOARD_WIDTH 15
+
 static struct command {
   const char *hello;
   const char *quit;
@@ -43,6 +47,8 @@ static struct command {
 
 typedef struct tile {
   int modifier;
+  int x;
+  int y;
   char letter;
 } Tile;
 
@@ -84,6 +90,22 @@ void str_to_tile(Tile *t, const char *s);
 
 //Sends the board to everyone
 void board_push(const Client *clients, const int max_clients, Tile **board);
+
+//Check if something is a board
+bool is_board(const char *msg, const int len);
+
+//Read in the board
+void read_board(Tile **board, const char *msg);
+
+//Checks if is place
+bool is_place(const char *msg, const int len);
+
+//TODO fix this
+//Places a tile
+void place(Client *c, const Tile *tiles, const int len);
+
+//Checks if someone is a winner
+bool is_winner(const char *msg, const int len);
 
 //TODO fix this
 int get_winner(const Client *clients, const int max_socks);
