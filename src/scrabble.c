@@ -214,7 +214,9 @@ bool userset_server(Client *clients, const int connected_clients, const int inde
     if (strcmp(clients[i].name, name) == 0 && i != index)
       return false;
   }
+  memset(clients[index].name, 0, NAME_LEN);
   memcpy(clients[index].name, name, len);
+  clients[index].name_len = len;
   return true;
 }
 
@@ -224,6 +226,37 @@ void userset_client(Client *c, const char *name, const int len) {
   int msg_len = strlen(msg);
   memcpy(msg + msg_len, name, len);
   write(c->sock, msg, msg_len + len);
+}
+
+//Announces a user changes their name
+void userchange(const Client *clients, const int connected_clients, const char *old_name,
+                const int old_len, const char *name, const int len) {
+  char msg[100] = "USERCHANGE ";
+  int n = strlen(msg);
+  memcpy(msg+n, old_name, old_len);
+  n += old_len;
+  memcpy(msg+n, " ", 1);
+  ++n;
+  memcpy(msg+n, name, len);
+  n += len;
+  memcpy(msg+n, "\r\n", 2);
+  n += 2;
+  for (int i = 0; i < connected_clients; ++i) {
+    write(clients[i].sock, msg, n);
+  }
+}
+
+//Sends an announcement to client that clients from the list have joined
+void userjoin(Client *c, Client *clients, const int clients_len) {
+  for (int i = 0; i < clients_len; ++i) {
+    char msg[100] = "USERJOIN ";
+    int n = strlen(msg);
+    memcpy(msg+n, clients[i].name, clients[i].name_len);
+    n += clients[i].name_len;
+    memcpy(msg+n, "\r\n", 2);
+    n += 2;
+    write(c->sock, msg, n);
+  }
 }
 
 //Makes a tile into a string
@@ -487,7 +520,7 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
     }
     //Client connected
     else if (index > -1 && buffer == NULL) {
-      hello(&clients[index]);
+      hello(clients+index);
     }
     //Client sent message
     else if (buffer != NULL) {
@@ -501,9 +534,36 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
 
       //Check the if hello is correct
       if (clients[index].hello && is_hello(buffer, len)) {
+        char msg[100] = "Welcome! Please set a username";
         clients[index].hello = false;
+        ok(clients+index, msg, strlen(msg));
+
+        //Set client's name to their ip
+        char ip[100] = "";
+        strcat(ip, inet_ntoa(clients[index].sa.sin_addr));
+        strcat(clients[index].name, ip);
+        clients[index].name_len = strlen(ip);
+
+        //Create new client list to send to
+        if (connected_clients > 1) {
+          Client *join = (Client*) calloc(connected_clients-1, sizeof(Client));
+          int joined = 0;
+
+          //Alert all old clients the new person has joined
+          for (int i = 0; i < connected_clients; ++i) {
+            if (i != index) {
+              userjoin((clients+i), (clients+index), 1);
+              join[joined] = clients[i];
+              ++joined;
+            }
+          }
+          //Alert the new client everyone else joined
+          userjoin((clients+index), join, joined);
+        }
       }
       else if (clients[index].hello && !is_hello(buffer, len)) {
+        char msg[100] = "Sorry, that's not a valid greeting";
+        nok(clients+index, msg, strlen(msg));
         goodbye(clients+index);
       }
       else if (is_quit(buffer, len)) {
@@ -518,7 +578,12 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
             nok((clients+index), msg, strlen(msg));
           }
       }
+      //Check to see if a user is trying to set their name
       else if (strncmp(Command.userset, buffer, strlen(Command.userset)) == 0) {
+        char old_name[40] = "";
+        memcpy(old_name, clients[index].name, clients[index].name_len);
+        int old_len = clients[index].name_len;
+
         //See if the username is set
         if (is_userset(buffer, len)) {
           char name[40] = "";
@@ -530,7 +595,10 @@ int scrabble_server(const char *ip, const int port, const int max_clients) {
           if (userset_server(clients, connected_clients, index, name, n)) {
             char msg[100] = "Name changed successfully";
             ok((clients+index), msg, strlen(msg));
-            userchange(clients, connected_clients, name, n);
+            //Make sure there is a name to actually announce a change
+            if (old_len > 0) {
+              userchange(clients, connected_clients, old_name, old_len, name, n);
+            }
           }
           else  {
             char msg[100] = "The given name is already taken";

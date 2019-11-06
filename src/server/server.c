@@ -108,8 +108,10 @@ int get_output(int sock, Client clients[], const int max_clients, int *index, ch
     }
     ++connected_clients;
 
+    //Get user information
+    getpeername(c.sock, (struct sockaddr*)&c.sa, (socklen_t*)&c.len);
+
     //Inform user of socket number - used in send and receive commands
-    //printf("New connection, socket fd is %d, ip is : %s, port : %d\n", c.sock, inet_ntoa(c.sa.sin_addr), ntohs(c.sa.sin_port));
 
     //Add new socket to array of sockets
     for (int i = 0; i < max_clients; ++i) {
@@ -132,10 +134,6 @@ int get_output(int sock, Client clients[], const int max_clients, int *index, ch
       //Check if it was for closing, and also read the incoming message
       //If connection closed
       if ((*len = read(clients[i].sock, *buffer, BUFFER_LEN)) == 0) {
-        //Keep this in case needed
-        //getpeername(clients[i].sock, (struct sockaddr*)&clients[i].sa, (socklen_t*)&clients[i].len);
-        //printf("Host disconnected, ip %s, port %d\n", inet_ntoa(clients[i].sa.sin_addr), ntohs(clients[i].sa.sin_port));
-
         //Close the socket and mark as 0 in list for reuse
         close(clients[i].sock);
         memset(clients + i, 0, sizeof(Client));

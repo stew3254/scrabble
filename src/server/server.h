@@ -16,6 +16,8 @@ typedef struct client {
   char hand[8];
   //Client sock
   int sock;
+  //Name length
+  int name_len;
   //Client length
   int len;
   //Score
